@@ -685,8 +685,6 @@ import copy
 # Local imports
 import g
 
-from .static_loader import load_static
-from .resource_dictionary import ResourceDictionary
 from .exceptions import CreatePooledNodeError, RemovePooledNodeError
 
 mockupfolders = []
@@ -759,29 +757,7 @@ class ResourceManager(object):
 
         # Load the static resources into the dictionary
 
-        self.resource_dictionary = ResourceDictionary()
         mockupfolders = copy.copy(g.staticfolders)
-
-        if "Redfish" in mockupfolders:
-            logging.info('Loading Redfish static resources')
-            self.ServiceRoot =       load_static('', 'redfish', mode, rest_base, self.resource_dictionary)
-
-            self.AccountService =   load_static('AccountService', 'redfish', mode, rest_base, self.resource_dictionary)
-
-            self.Registries =       load_static('Registries', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.Registries =       load_static('Registries', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.SessionService =   load_static('SessionService', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.TaskService =      load_static('TaskService', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.EventService =     load_static('EventService', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.Chassis =          load_static('Chassis', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.Storage =          load_static('Storage', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.Fabrics =          load_static('Fabrics', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.Systems=           load_static('Systems', 'redfish', mode, rest_base, self.resource_dictionary)
-            self.Managers =         load_static('Managers', 'redfish', mode, rest_base, self.resource_dictionary)
-
-#        if "Swordfish" in mockupfolders:
-#            self.StorageServices = load_static('StorageServices', 'redfish', mode, rest_base, self.resource_dictionary)
-#            self.StorageSystems = load_static('StorageSystems', 'redfish', mode, rest_base, self.resource_dictionary)
 
         # Attach APIs for dynamic resources
         g.api.add_resource(AccelerationFunction0CollectionAPI, '/redfish/v1/Systems/<string:ComputerSystemId>/Processors/<string:ProcessorId>/AccelerationFunctions', resource_class_kwargs={'auth': auth})

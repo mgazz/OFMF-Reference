@@ -5,6 +5,6 @@
   "STATIC": "Disable",
   "SPEC": "Redfish",
   "MOCKUPFOLDERS": ["Mockups"],
-  "AUTHENTICATION": "Enable",
+  "AUTHENTICATION": "Disable",
   "CERTIFICATE": ["server.crt", "server.key"]
 }

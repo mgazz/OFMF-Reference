@@ -57,9 +57,7 @@ from flask_restful import reqparse, Api, Resource
 # Emulator Imports
 from api_emulator.version import __version__
 from api_emulator.resource_manager import ResourceManager
-from api_emulator.static_resource_manager import StaticResourceManager
 from api_emulator.exceptions import CreatePooledNodeError, ConfigurationError, RemovePooledNodeError
-from api_emulator.resource_dictionary import ResourceDictionary
 from api_emulator.redfish.ServiceRoot1_api import *
 from api_emulator.utils import *
 
@@ -141,9 +139,6 @@ def init_resource_manager():
             with open(POPULATE, 'r') as f:
                 infragen_config = json.load(f)
             populate(infragen_config.get('POPULATE',10))
-
-    resource_dictionary = ResourceDictionary()
-
 
 def error_response(msg, status, jsonify=False):
     data = {
