@@ -174,15 +174,8 @@ def get_json_data(path):
     # return jsonify(data)
     return data
 
+def create_object (config, members, member_ids, path):
     # For POST Singleton API:
-def create_and_patch_object (config, members, member_ids, path, collection_path):
-
-    # If input body data, then update properties
-    if request.data:
-        request_data = json.loads(request.data)
-        # Update the keys of payload in json file.
-        for key, value in request_data.items():
-            config[key] = value
 
     members.append(config)
     member_ids.append({'@odata.id': config['@odata.id']})
@@ -197,8 +190,22 @@ def create_and_patch_object (config, members, member_ids, path, collection_path)
     with open(os.path.join(path, "index.json"), "w") as fd:
         fd.write(json.dumps(config, indent=4, sort_keys=True))
 
+def create_and_patch_object (config, members, member_ids, path, collection_path):
+
+    # If input body data, then update properties
+    if request.data:
+        request_data = json.loads(request.data)
+        # Update the keys of payload in json file.
+        for key, value in request_data.items():
+            config[key] = value
+
+    res = create_object(config,members,member_ids,path)
+    if res != None:
+        return res
+
     # update the collection json file with new added resource
     update_collections_json(path=collection_path, link=config['@odata.id'])
+
     return config
 
 def delete_object (path, base_path):

@@ -175,6 +175,7 @@ from api_emulator.redfish.EthernetInterface4_api import *
 from api_emulator.redfish.EthernetInterface5_api import *
 from api_emulator.redfish.EthernetInterface6_api import *
 from api_emulator.redfish.EventDestination_api import *
+from api_emulator.redfish.EventListener_api import *
 from api_emulator.redfish.ExternalAccountProvider0_api import *
 from api_emulator.redfish.ExternalAccountProvider1_api import *
 from api_emulator.redfish.FabricAdapter0_api import *
@@ -2224,6 +2225,8 @@ class ResourceManager(object):
         g.api.add_resource(EventServiceAPI, '/redfish/v1/EventService', resource_class_kwargs={'auth': auth})
 
         g.api.add_resource(JobServiceAPI, '/redfish/v1/JobService', resource_class_kwargs={'auth': auth})
+
+        g.api.add_resource(EventListenerAPI, '/EventListener',resource_class_kwargs={'auth': auth})
 
         g.api.add_resource(KeyServiceAPI, '/redfish/v1/KeyService', resource_class_kwargs={'auth': auth})
 
