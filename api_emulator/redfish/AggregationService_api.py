@@ -60,7 +60,7 @@ class AggregationServiceAPI(Resource):
 		msg, code = check_authentication(self.auth)
 
 		if code == 200:
-			path = os.path.join(self.root, 'index.json')
+			path = os.path.join(self.root, 'AggregationService', 'index.json')
 			return get_json_data (path)
 		else:
 			return msg, code

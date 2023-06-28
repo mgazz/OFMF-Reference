@@ -30,7 +30,7 @@
 BASE_DIR=$(pwd)
 WORK_DIR=../OFMF
 
-API_PORT=5000
+API_PORT=5001
 SETUP_ONLY=
 
 COMMON_NAME="$1"
@@ -72,6 +72,9 @@ while [ "$1" != "" ]; do
         -n | --no-start)
             SETUP_ONLY="true"
             ;;
+        -u | --update)
+            UPDATE_ONLY="true"
+            ;;
         *)
             print_help
             exit 1
@@ -105,6 +108,19 @@ if ! [ -x "$(command -v git)" ]; then
          "for installation instructions."
     echo ""
     exit 1
+fi
+
+if [ "$UPDATE_ONLY" == "true" ]; then
+    echo ""
+    echo "Updating installed emulator with modified files"
+    echo ""
+
+    for f in `git ls-files -m`; do
+        echo "Updating: $f"
+        cp -f $f $WORK_DIR/$f
+    done
+
+    exit 0
 fi
 
 echo "Creating workspace: '$WORK_DIR'..."
