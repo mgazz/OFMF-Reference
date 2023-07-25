@@ -32,6 +32,7 @@ WORK_DIR=../OFMF
 
 API_PORT=5001
 SETUP_ONLY=
+RESET_RESOURCES=
 
 COMMON_NAME="$1"
 EXTFILE=certificate_config.cnf
@@ -55,6 +56,9 @@ Options:
 
     -n | --no-start      -- Prepare the emulator but do not start it.
 
+    -u | --update        -- Update working dir with modified files
+    -r | --reset         -- Reset the Resources folder (RedFish tree)
+
 EOF
 }
 
@@ -74,6 +78,9 @@ while [ "$1" != "" ]; do
             ;;
         -u | --update)
             UPDATE_ONLY="true"
+            ;;
+        -r | --reset)
+            RESET_RESOURCES="true"
             ;;
         *)
             print_help
@@ -108,6 +115,15 @@ if ! [ -x "$(command -v git)" ]; then
          "for installation instructions."
     echo ""
     exit 1
+fi
+
+if [ "$RESET_RESOURCES" == "true" ]; then
+    echo ""
+    echo "Wiping resources folder with original files"
+    echo ""
+
+    rm -r $WORK_DIR/Resources
+    cp -r Resources $WORK_DIR/
 fi
 
 if [ "$UPDATE_ONLY" == "true" ]; then
