@@ -94,11 +94,17 @@ class EventProcessor(Resource):
             "rb": g.rest_base
         }
         aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
-        request.data = json.dumps(aggregation_source_template)
+        aggregation_source_template["HostName"] = event['MessageArgs'][1]
+        aggregation_source_template["Name"] = f"Agent {aggregationSourceId}"
+        aggregation_source_template["Links"] = {
+            "ConnectionMethod" : {},
+            "ResourcesAccessed" : []
+        }
+        logging.debug(f"aggregatoin_source_template: {aggregation_source_template}")
 
+        # At this stage we are not taking care of authenticating with an agent
+        request.data = json.dumps(aggregation_source_template)
         AggregationSourceAPI.post(self, aggregationSourceId)
-        
-        print(aggregation_source_template)
 
 def handle_events(res):
     config = json.loads(request.data)
