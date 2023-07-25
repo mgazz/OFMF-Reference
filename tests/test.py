@@ -1,69 +1,34 @@
-import json
-import pprint
-import requests
 import test_templates
-import sys
+import unittest
+from api_emulator.resource_manager import ResourceManager
+import g
 
-def send_post(url, payload):
-    headers = {'Content-type':'application/json', 'Accept':'text/plain'}
-    resp = requests.post (url, data = json.dumps(payload), headers = headers)
+REST_BASE = '/redfish/v1'
+g.rest_base = REST_BASE
 
-    return resp.status_code
+class TestOFMF(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        global resource_manager
+        global REST_BASE
+        global TRAYS
+        global SPEC
+        resource_manager = ResourceManager(None, None, None, "Disable", None)
+        g.app.testing = True
+        cls.client = g.app.test_client()
 
-def send_get(url):
-    resp = requests.get(url)
+    def test_create_computer_system(self):
+        system_url = f"{REST_BASE}/Systems"
+        response = self.client.post(system_url, json=test_templates.test_system)
+        status_code = response.status_code
+        self.assertEqual(status_code, 200)
 
-    return resp.status_code, resp.json()
-
-def send_delete(url):
-    resp = requests.delete(url)
-
-    return resp.status_code
-
-def test_create_chassis(url):
-    chassis_url = f"{url}/Chassis"
-    ret_code = send_post(chassis_url, test_templates.test_chassis)
-
-    if ret_code == 200:
-        return True
-    else:
-        return False
-
-def test_create_computer_system(url):
-    # I am assuming we have already created the target Chassis
-    system_url = f"{url}/Systems"
-    ret_code = send_post(system_url, test_templates.test_system)
-
-    if ret_code == 200:
-        return True
-    else:
-        return False
-
-
-def test_create_computer_system_duplicate_id():
-    # To Be Implemented
-    pass
-
-
-def main():
-    url = "http://localhost:5000/redfish/v1"
-
-    print("##### Starting test Suite  #####")
-    print()
-    print ("Testing creating a Chassis...")
-    if test_create_chassis(url):
-        print ("PASSED")
-    else:
-        print ("FAILED")
-        sys.exit(1)
-
-    print("Testing creating a ComputerSystem...")
-    if test_create_computer_system(url):
-        print ("PASSED")
-    else:
-        print ("FAILED")
-        sys.exit(1)
-
+    def test_create_chassis(self):
+        chassis_url = f"{REST_BASE}/Chassis"
+        response = self.client.post(chassis_url, json=test_templates.test_chassis)
+        status_code = response.status_code
+        self.assertEqual(status_code, 200)
 
 if __name__ == '__main__':
-    main()
+    unittest.main()
+#     main()
