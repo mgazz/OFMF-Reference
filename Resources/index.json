@@ -4,6 +4,9 @@
     "Name": "Root Service",
     "RedfishVersion": "1.14.0",
     "UUID": "92384634-2938-2342-8820-489239905423",
+    "AggregationService": {
+        "@odata.id": "/redfish/v1/AggregationService"
+    },
     "Chassis": {
         "@odata.id": "/redfish/v1/Chassis"
     },

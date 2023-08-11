@@ -3,10 +3,12 @@ from flask_restful import Resource
 from .constants import *
 import requests
 import json
-
+import g
 from api_emulator.utils import create_path, create_object
 
 from api_emulator.redfish.Manager_api import ManagerCollectionAPI
+from api_emulator.redfish.AggregationSource_api import AggregationSourceAPI
+from api_emulator.redfish.templates import AggregationSource as AggregationSourceTemplate
 
 import logging
 
@@ -59,21 +61,50 @@ class EventProcessor(Resource):
                 for element in value:
                     EventProcessor.recursiveFetch(self, element, obj_root, host, port)
 
-    def ManagerCreated(self):
+    def ManagerCreated(self, event):
         logging.info("ManagerCreated method called")
-        config = json.loads(request.data)
-        for event in config['Events']:
-            host = event['MessageArgs'][0]
-            port = event['MessageArgs'][1]
-            response = requests.get(f"{host}:{port}/{event['OriginOfCondition']['@odata.id']}")
-            if response.status_code == 200:
-                redfish_obj = response.json()
+        host = event['MessageArgs'][0]
+        port = event['MessageArgs'][1]
+        response = requests.get(f"{host}:{port}/{event['OriginOfCondition']['@odata.id']}")
+        if response.status_code == 200:
+            redfish_obj = response.json()
 
-                request.data = json.dumps(redfish_obj, indent=2).encode('utf-8')
-                # Update ManagerCollection before fetching the resource subtree
-                ManagerCollectionAPI.post(self)
-                EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], host, port)
+            request.data = json.dumps(redfish_obj, indent=2).encode('utf-8')
+            # Update ManagerCollection before fetching the resource subtree
+            ManagerCollectionAPI.post(self)
+            EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], host, port)
 
+    def AggregationSourceDiscovered(self, event):
+        ###
+        # Fabric Agents are modelled as AggregationSource objects (RedFish v2023.1 at the time of writing this comment)
+        # Registration will happen with the OFMF receiving a and event with MessageId: AggregationSourceDiscovered
+        # The arguments of the event message are:
+        #   - Arg1: "Redfish"
+        #   - Arg2: "agent_ip:port"
+        # I am also assuming that the agent name to be used is contained in the OriginOfCondifiton field of the event as in the below example:
+        # {
+        #    "OriginOfCondition: [
+        #           "@odata.id" : "/redfish/v1/AggregationService/AggregationSource/AgentName"
+        #    ]"
+        # }
+        logging.info("AggregationSourceDiscovered method called")
+        aggregationSourceId = event['OriginOfCondition']['@odata.id'].split("/")[-1]
+        wildcards = {
+            "AggregationSourceId": aggregationSourceId,
+            "rb": g.rest_base
+        }
+        aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
+        aggregation_source_template["HostName"] = f"{event['MessageArgs'][0]}:{event['MessageArgs'][1]}"
+        aggregation_source_template["Name"] = f"Agent {aggregationSourceId}"
+        aggregation_source_template["Links"] = {
+            "ConnectionMethod" : {},
+            "ResourcesAccessed" : []
+        }
+        logging.debug(f"aggregatoin_source_template: {aggregation_source_template}")
+
+        # At this stage we are not taking care of authenticating with an agent
+        request.data = json.dumps(aggregation_source_template)
+        AggregationSourceAPI.post(self, aggregationSourceId)
 
 def handle_events(res):
     config = json.loads(request.data)
@@ -88,7 +119,7 @@ def handle_events(res):
         # }
         ###
         handlerfunc = getattr(EventProcessor, event['MessageId'].split(".")[-1])
-        handlerfunc(res)
+        handlerfunc(res, event)
 
 
 # EventListener API
