@@ -94,7 +94,7 @@ class EventProcessor(Resource):
             "rb": g.rest_base
         }
         aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
-        aggregation_source_template["HostName"] = event['MessageArgs'][1]
+        aggregation_source_template["HostName"] = f"{event['MessageArgs'][0]}:{event['MessageArgs'][1]}"
         aggregation_source_template["Name"] = f"Agent {aggregationSourceId}"
         aggregation_source_template["Links"] = {
             "ConnectionMethod" : {},
