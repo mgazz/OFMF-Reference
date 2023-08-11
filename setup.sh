@@ -171,6 +171,7 @@ cp -r -f "$BASE_DIR"/emulator.py "$WORK_DIR"/
 cp -r -f "$BASE_DIR"/ofmf-main.py "$WORK_DIR"/
 cp -r -f "$BASE_DIR"/certificate_config.cnf "$WORK_DIR"/
 cp -r -f "$BASE_DIR"/v3.ext "$WORK_DIR"/
+cp -r -f "$BASE_DIR"/tests "$WORK_DIR"/
 
 # generating server key
 echo "Generating private key"
