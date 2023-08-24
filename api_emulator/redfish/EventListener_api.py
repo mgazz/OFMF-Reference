@@ -1,13 +1,13 @@
 from flask import request
 from flask_restful import Resource
-from .constants import *
+import api_emulator.redfish.constants as constants
 import requests
 import json
 import g
 from api_emulator.utils import create_path, create_object
 
 from api_emulator.redfish.Manager_api import ManagerCollectionAPI
-from api_emulator.redfish.AggregationSource_api import AggregationSourceAPI
+import api_emulator.redfish.AggregationSource_api as AggregationSource_api
 from api_emulator.redfish.templates import AggregationSource as AggregationSourceTemplate
 
 import logging
@@ -22,11 +22,16 @@ INTERNAL_ERROR = 500
 class EventProcessor(Resource):
     def __init__(self):
         logging.info('Event Listener init called')
-        self.root = PATHS['Root']
+        self.root = constants.PATHS['Root']
 
-    def fetchResource(self, obj_id, obj_root, host, port):
+    def createResource(self,redfish_obj):
+        obj_path = "".join(redfish_obj['@odata.id'].split('/redfish/v1/'))
+        file_path = create_path(self.root, obj_path)
+        create_object(redfish_obj, [], [], file_path)
 
-        resource_endpoint = f"{host}:{port}/{obj_id}"
+    def fetchResource(self, obj_id, obj_root, host_url):
+
+        resource_endpoint = f"{host_url}/{obj_id}"
         logging.info(f"fetch: {resource_endpoint}")
         response = requests.get(resource_endpoint)
 
@@ -39,9 +44,9 @@ class EventProcessor(Resource):
 
             if 'Collection' in redfish_obj['@odata.type']:
                 logging.info(f"Found collection {redfish_obj['@odata.type']}")
-                EventProcessor.recursiveFetch(self, {'Members': redfish_obj['Members']}, obj_root, host, port)
+                EventProcessor.recursiveFetch(self, {'Members': redfish_obj['Members']}, obj_root, host_url)
 
-    def recursiveFetch(self, obj_dict, obj_root, host, port):
+    def recursiveFetch(self, obj_dict, obj_root, host_url):
         logging.info(f"dict: {obj_dict}, obj_root:{obj_root}")
         if obj_root is None or not obj_root or type(obj_dict) is not dict:
             return
@@ -53,13 +58,13 @@ class EventProcessor(Resource):
                 continue
             elif key == '@odata.id' and obj_root in value and obj_root != value:
                 logging.info(f"fetch k:{key}, v:{value}")
-                EventProcessor.fetchResource(self, value, obj_root, host, port)
+                EventProcessor.fetchResource(self, value, obj_root, host_url)
 
             if type(value) == dict:
-                EventProcessor.recursiveFetch(self, value, obj_root, host, port)
+                EventProcessor.recursiveFetch(self, value, obj_root, host_url)
             elif type(value) == list:
                 for element in value:
-                    EventProcessor.recursiveFetch(self, element, obj_root, host, port)
+                    EventProcessor.recursiveFetch(self, element, obj_root, host_url)
 
     def ManagerCreated(self, event):
         logging.info("ManagerCreated method called")
@@ -73,6 +78,20 @@ class EventProcessor(Resource):
             # Update ManagerCollection before fetching the resource subtree
             ManagerCollectionAPI.post(self)
             EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], host, port)
+    def ResourceCreated(self, event):
+        logging.info("New resource created")
+        #TODO don't assume AggregationSource
+
+        hostname = AggregationSource_api.members[0]['HostName']
+
+        response = requests.get(f"{hostname}/{event['OriginOfCondition']['@odata.id']}")
+        if response.status_code == 200:
+            redfish_obj = response.json()
+
+            request.data = json.dumps(redfish_obj, indent=2).encode('utf-8')
+            # Update ManagerCollection before fetching the resource subtree
+            EventProcessor.createResource(self,redfish_obj)
+            EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], hostname)
 
     def AggregationSourceDiscovered(self, event):
         ###
@@ -104,7 +123,7 @@ class EventProcessor(Resource):
 
         # At this stage we are not taking care of authenticating with an agent
         request.data = json.dumps(aggregation_source_template)
-        AggregationSourceAPI.post(self, aggregationSourceId)
+        AggregationSource_api.AggregationSourceAPI.post(self, aggregationSourceId)
 
 def handle_events(res):
     config = json.loads(request.data)
@@ -126,7 +145,7 @@ def handle_events(res):
 class EventListenerAPI(Resource):
     def __init__(self, **kwargs):
         logging.info('Event Listener init called')
-        self.root = PATHS['Root']
+        self.root = constants.PATHS['Root']
         self.auth = kwargs['auth']
 
     # HTTP GET
