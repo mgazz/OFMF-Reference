@@ -4,7 +4,8 @@ import api_emulator.redfish.constants as constants
 import requests
 import json
 import g
-from api_emulator.utils import create_path, create_object
+from api_emulator.utils import create_path, create_object, patch_object
+import os
 
 from api_emulator.redfish.Manager_api import ManagerCollectionAPI
 import api_emulator.redfish.AggregationSource_api as AggregationSource_api
@@ -18,6 +19,12 @@ INTERNAL_ERROR = 500
 
 
 # EventListener does not have a Collection API
+def getRelativePath(resource):
+    if '@odata.id' in resource:
+        return os.path.relpath(resource['@odata.id'], '/redfish/v1/')
+
+def patchResource(root,resource):
+    patch_object(f"{root}/{getRelativePath(resource)}/index.json")
 
 class EventProcessor(Resource):
     def __init__(self):
@@ -25,7 +32,7 @@ class EventProcessor(Resource):
         self.root = constants.PATHS['Root']
 
     def createResource(self,redfish_obj):
-        obj_path = "".join(redfish_obj['@odata.id'].split('/redfish/v1/'))
+        obj_path = getRelativePath(redfish_obj)
         file_path = create_path(self.root, obj_path)
         create_object(redfish_obj, [], [], file_path)
 
@@ -38,15 +45,13 @@ class EventProcessor(Resource):
         if response.status_code == 200:
             redfish_obj = response.json()
 
-            obj_path = "".join(redfish_obj['@odata.id'].split('/redfish/v1/'))
+            obj_path = getRelativePath(redfish_obj)
             file_path = create_path(self.root, obj_path)
             create_object(redfish_obj, [], [], file_path)
+            return redfish_obj
 
-            if 'Collection' in redfish_obj['@odata.type']:
-                logging.info(f"Found collection {redfish_obj['@odata.type']}")
-                EventProcessor.recursiveFetch(self, {'Members': redfish_obj['Members']}, obj_root, host_url)
 
-    def recursiveFetch(self, obj_dict, obj_root, host_url):
+    def recursiveFetch(self, obj_dict, obj_root, aggregation_source):
         logging.info(f"dict: {obj_dict}, obj_root:{obj_root}")
         if obj_root is None or not obj_root or type(obj_dict) is not dict:
             return
@@ -58,13 +63,18 @@ class EventProcessor(Resource):
                 continue
             elif key == '@odata.id' and obj_root in value and obj_root != value:
                 logging.info(f"fetch k:{key}, v:{value}")
-                EventProcessor.fetchResource(self, value, obj_root, host_url)
+                redfish_obj = EventProcessor.fetchResource(self, value, obj_root, aggregation_source["HostName"])
+                if redfish_obj is not None and 'Collection' in redfish_obj['@odata.type']:
+                    logging.info(f"Found collection {redfish_obj['@odata.type']}")
+                    EventProcessor.recursiveFetch(self, {'Members': redfish_obj['Members']}, obj_root,aggregation_source)
+
+                aggregation_source["Links"]["ResourcesAccessed"].append(redfish_obj['@odata.id'])
 
             if type(value) == dict:
-                EventProcessor.recursiveFetch(self, value, obj_root, host_url)
+                EventProcessor.recursiveFetch(self, value, obj_root, aggregation_source)
             elif type(value) == list:
                 for element in value:
-                    EventProcessor.recursiveFetch(self, element, obj_root, host_url)
+                    EventProcessor.recursiveFetch(self, element, obj_root, aggregation_source)
 
     def ManagerCreated(self, event):
         logging.info("ManagerCreated method called")
@@ -79,11 +89,15 @@ class EventProcessor(Resource):
             ManagerCollectionAPI.post(self)
             EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], host, port)
 
+
+
     def ResourceCreated(self, event):
         logging.info("New resource created")
-        #TODO don't assume AggregationSource
 
-        hostname = AggregationSource_api.members[0]['HostName']
+        #TODO don't assume there is only one AggregationSource
+
+        aggregation_source = AggregationSource_api.members[0]
+        hostname=aggregation_source["HostName"]
 
         response = requests.get(f"{hostname}/{event['OriginOfCondition']['@odata.id']}")
         if response.status_code == 200:
@@ -92,7 +106,12 @@ class EventProcessor(Resource):
             request.data = json.dumps(redfish_obj, indent=2).encode('utf-8')
             # Update ManagerCollection before fetching the resource subtree
             EventProcessor.createResource(self,redfish_obj)
-            EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], hostname)
+            EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], aggregation_source)
+
+        request.data = json.dumps(aggregation_source)
+        patchResource(self.root,aggregation_source)
+
+
 
     def AggregationSourceDiscovered(self, event):
         ###
@@ -120,7 +139,7 @@ class EventProcessor(Resource):
             "ConnectionMethod" : {},
             "ResourcesAccessed" : []
         }
-        logging.debug(f"aggregatoin_source_template: {aggregation_source_template}")
+        logging.debug(f"aggregation_source_template: {aggregation_source_template}")
 
         # At this stage we are not taking care of authenticating with an agent
         request.data = json.dumps(aggregation_source_template)
