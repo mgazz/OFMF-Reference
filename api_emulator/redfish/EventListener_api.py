@@ -78,6 +78,7 @@ class EventProcessor(Resource):
             # Update ManagerCollection before fetching the resource subtree
             ManagerCollectionAPI.post(self)
             EventProcessor.recursiveFetch(self, redfish_obj, redfish_obj['@odata.id'], host, port)
+
     def ResourceCreated(self, event):
         logging.info("New resource created")
         #TODO don't assume AggregationSource
