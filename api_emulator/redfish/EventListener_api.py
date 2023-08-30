@@ -8,6 +8,7 @@ from api_emulator.utils import create_path, create_object, patch_object
 import os
 
 from api_emulator.redfish.Manager_api import ManagerCollectionAPI
+from api_emulator.redfish.Fabric_api import FabricAPI
 import api_emulator.redfish.AggregationSource_api as AggregationSource_api
 from api_emulator.redfish.templates import AggregationSource as AggregationSourceTemplate
 
@@ -25,6 +26,18 @@ def getRelativePath(resource):
 
 def patchResource(root,resource):
     patch_object(f"{root}/{getRelativePath(resource)}/index.json")
+
+def getAggregationSource():
+    config = json.loads(request.data)
+    if len(config['Events'])!=1:
+        return
+    event = config['Events'][0]
+    resource = event['OriginOfCondition']['@odata.id']
+    for agsource in AggregationSource_api.members:
+        if resource in agsource['Links']['ResourcesAccessed']:
+            return agsource
+
+
 
 class EventProcessor(Resource):
     def __init__(self):
@@ -97,6 +110,11 @@ class EventProcessor(Resource):
         #TODO don't assume there is only one AggregationSource
 
         aggregation_source = AggregationSource_api.members[0]
+
+        aggregation_source = getAggregationSource()
+        #if aggregation_source is None:
+        #  return error
+
         hostname=aggregation_source["HostName"]
 
         response = requests.get(f"{hostname}/{event['OriginOfCondition']['@odata.id']}")
@@ -132,12 +150,16 @@ class EventProcessor(Resource):
             "AggregationSourceId": aggregationSourceId,
             "rb": g.rest_base
         }
+
+
         aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
         aggregation_source_template["HostName"] = event['MessageArgs'][1]
         aggregation_source_template["Name"] = f"Agent {aggregationSourceId}"
+        response = requests.get(f"{aggregation_source_template['HostName']}/redfish/v1/Fabrics")
+
         aggregation_source_template["Links"] = {
             "ConnectionMethod" : {},
-            "ResourcesAccessed" : []
+            "ResourcesAccessed" : [member['@odata.id'] for member in response.json()['Members']]
         }
         logging.debug(f"aggregation_source_template: {aggregation_source_template}")
 
