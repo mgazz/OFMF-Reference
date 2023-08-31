@@ -145,6 +145,7 @@ class EventProcessor(Resource):
         #    ]"
         # }
         logging.info("AggregationSourceDiscovered method called")
+        #TODO: do we generate a new name?
         aggregationSourceId = event['OriginOfCondition']['@odata.id'].split("/")[-1]
         wildcards = {
             "AggregationSourceId": aggregationSourceId,
@@ -153,7 +154,7 @@ class EventProcessor(Resource):
 
 
         aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
-        aggregation_source_template["HostName"] = f"{event['MessageArgs'][0]}:{event['MessageArgs'][1]}"
+        aggregation_source_template["HostName"] = f"{event['MessageArgs'][1]}"
         aggregation_source_template["Name"] = f"Agent {aggregationSourceId}"
         response = requests.get(f"{aggregation_source_template['HostName']}/redfish/v1/Fabrics")
 
