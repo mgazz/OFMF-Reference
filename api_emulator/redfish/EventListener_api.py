@@ -145,6 +145,7 @@ class EventProcessor(Resource):
         #    ]"
         # }
         logging.info("AggregationSourceDiscovered method called")
+        #TODO: do we generate a new name?
         aggregationSourceId = event['OriginOfCondition']['@odata.id'].split("/")[-1]
         wildcards = {
             "AggregationSourceId": aggregationSourceId,
