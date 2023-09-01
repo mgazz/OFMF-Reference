@@ -158,10 +158,23 @@ class EventProcessor(Resource):
         hostname = event['MessageArgs'][1]
 
         response = requests.get(f"{hostname}/{connectionMethodId}")
-        if response.status_code == 200:
-            createResource(response.json())
+        if response.status_code != 200:
+            raise Exception("Cannot find ConnectionMethod")
 
+        ###
+        connection_method = response.json()
+        connection_method_name= connectionMethodId.split("/")[-1]
+        connection_method_template = ConnectionMethodTemplate.get_ConnectionMethod_instance(
+            {
+                "ConnectionMethodId": connection_method_name,
+                "rb": g.rest_base
+            }
+        )
+        connection_method_template['ConnectionMethodType']= connection_method['ConnectionMethodType'],
+        connection_method_template['ConnectionMethodVariant']=connection_method['ConnectionMethodVariant']
 
+        request.data = json.dumps(connection_method_template)
+        ConnectionMethod_api.ConnectionMethodAPI.post(self, connection_method_name)
 
         aggregationSourceId = str(uuid4())
 
@@ -170,26 +183,18 @@ class EventProcessor(Resource):
             "rb": g.rest_base
         }
 
-
         aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
         aggregation_source_template["HostName"] = f"{event['MessageArgs'][1]}"
         aggregation_source_template["Name"] = f"Agent {aggregationSourceId}"
 
-        #fetch ConnectionMethod
+        #fetch Fabric resources
         response = requests.get(f"{aggregation_source_template['HostName']}/redfish/v1/Fabrics")
-        connectionMethodId = response.json()['@odata.id'].split("/")[-1]
-        connection_method_template = ConnectionMethodTemplate.get_ConnectionMethod_instance(
-            {
-                "ConnectionMethodId": connectionMethodId,
-                "rb": g.rest_base
-            }
-        )
-        request.data = json.dumps(connection_method_template)
-        ConnectionMethod_api.ConnectionMethodAPI.post(self, connectionMethodId)
 
 
         aggregation_source_template["Links"] = {
-            "ConnectionMethod" : {},
+            "ConnectionMethod" : {
+                "@odata.id": connection_method_template['@odata.id']
+            },
             "ResourcesAccessed" : [member['@odata.id'] for member in response.json()['Members']]
         }
         logging.debug(f"aggregation_source_template: {aggregation_source_template}")
