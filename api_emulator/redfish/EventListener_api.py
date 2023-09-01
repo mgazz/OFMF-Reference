@@ -157,7 +157,6 @@ class EventProcessor(Resource):
 
         hostname = event['MessageArgs'][1]
 
-        import pdb;pdb.set_trace()
         response = requests.get(f"{hostname}/{connectionMethodId}")
         if response.status_code == 200:
             createResource(response.json())
@@ -170,7 +169,6 @@ class EventProcessor(Resource):
             "AggregationSourceId": aggregationSourceId,
             "rb": g.rest_base
         }
-        import pdb;pdb.set_trace()
 
 
         aggregation_source_template = AggregationSourceTemplate.get_AggregationSource_instance(wildcards)
@@ -198,7 +196,9 @@ class EventProcessor(Resource):
 
         # At this stage we are not taking care of authenticating with an agent
         request.data = json.dumps(aggregation_source_template)
-        AggregationSource_api.AggregationSourceAPI.post(self, aggregationSourceId)
+        resp, msg = AggregationSource_api.AggregationSourceAPI.post(self, aggregationSourceId)
+        if resp == 422:
+            raise Exception(msg)
 
 def handle_events(res):
     config = json.loads(request.data)

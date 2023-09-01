@@ -121,6 +121,15 @@ class AggregationSourceAPI(Resource):
 		msg, code = check_authentication(self.auth)
 
 		if code == 200:
+
+
+			new_aggr_source = json.loads(request.data)
+			for member in members:
+				if bool(set(new_aggr_source['Links']['ResourcesAccessed']) &
+						set(member['Links']['ResourcesAccessed'])):
+					return 422, "Resource conflict with existing AggregationSource"
+
+
 			path = create_path(self.root, 'AggregationService/AggregationSources/{0}').format(AggregationSourceId)
 			collection_path = os.path.join(self.root, 'AggregationService/AggregationSources', 'index.json')
 
