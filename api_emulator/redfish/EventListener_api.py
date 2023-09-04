@@ -49,9 +49,9 @@ def createResource(redfish_obj):
     file_path = create_path(constants.PATHS['Root'], obj_path)
     create_object(redfish_obj, [], [], file_path)
 
-def fetchResource(obj_id, obj_root, host_url):
+def fetchResource(obj_id, aggregation_source):
 
-    resource_endpoint = f"{host_url}/{obj_id}"
+    resource_endpoint = f'{aggregation_source["HostName"]}/{obj_id}'
     logging.info(f"fetch: {resource_endpoint}")
     response = requests.get(resource_endpoint)
 
@@ -61,55 +61,86 @@ def fetchResource(obj_id, obj_root, host_url):
         obj_path = getRelativePath(redfish_obj)
         file_path = create_path(constants.PATHS['Root'], obj_path)
         create_object(redfish_obj, [], [], file_path)
+        aggregation_source["Links"]["ResourcesAccessed"].append(redfish_obj['@odata.id'])
+        return redfish_obj
+
+def handleEntryIfNotVisited(entry,visited,queue):
+    if '@odata.id' in entry and entry['@odata.id'] not in visited:
+        visited.append(entry['@odata.id'])
+        queue.append(entry['@odata.id'])
+
+def fetchResourceAndTree(id,aggregation_source,visited,queue,fetched):
+    path_nodes = id.split("/")
+    need_parent_prefetch = False
+    for node_position in range(4,len(path_nodes)-1):
+        redfish_path =  f'/redfish/v1/{"/".join(path_nodes[3:node_position+1])}'
+        logging.info(f"Checking redfish path: {redfish_path}")
+        if redfish_path not in visited:
+            need_parent_prefetch= True
+            logging.info(f"Inspect redfish path: {redfish_path}")
+            queue.append(redfish_path)
+            visited.append(redfish_path)
+    if need_parent_prefetch: #requeue
+        queue.append(id)
+    else:
+        redfish_obj = fetchResource(id,aggregation_source)
+        fetched.append(id)
         return redfish_obj
 
 
-def recursiveFetch(obj_dict, obj_root, aggregation_source):
-    logging.info(f"dict: {obj_dict}, obj_root:{obj_root}")
-    if obj_root is None or not obj_root or type(obj_dict) is not dict:
-        return
 
-    for key, value in obj_dict.items():
-        logging.info(f"checking k:{key}, v:{value}")
-        if key == 'Links':  # Do not explore Links for now
-            logging.info(f"returning k:{key}, v:{value}")
+
+def bfsInspection(node,aggregation_source):
+    visited = []
+    queue = []
+    fetched = []
+    visited.append(node['@odata.id'])
+    queue.append(node['@odata.id'])
+
+    def handleList(_list):
+        for entry in _list:
+            if type(entry) == list:
+                handleList(entry)
+            else:
+                handleEntryIfNotVisited(entry,visited,queue)
+
+
+
+    while queue:
+        queue = sorted(queue)
+        print(queue)
+        id = queue.pop(0)
+        redfish_obj = fetchResourceAndTree(id, aggregation_source,visited,queue,fetched)
+        if redfish_obj is None or type(redfish_obj)!= dict:
+            logging.info(f"Resource - {id} - not available")
             continue
-        elif key == '@odata.id' and obj_root in value and obj_root != value:
-            logging.info(f"fetch k:{key}, v:{value}")
-            redfish_obj = fetchResource(value, obj_root, aggregation_source["HostName"])
-            if redfish_obj is not None and 'Collection' in redfish_obj['@odata.type']:
-                logging.info(f"Found collection {redfish_obj['@odata.type']}")
-                recursiveFetch({'Members': redfish_obj['Members']}, obj_root,aggregation_source)
+        for key,val in redfish_obj.items():
 
-            aggregation_source["Links"]["ResourcesAccessed"].append(redfish_obj['@odata.id'])
+            if key == 'Links':
+                logging.info(f"!!!! Link... key: {key}, val: {val} ")
+                if type(val)==dict:
+                    for link,link_value in val.items():
+                        if type(link_value) == list:
+                            handleList(link_value)
+                        else:
+                            handleEntryIfNotVisited(link_value,visited,queue)
 
-        if type(value) == dict:
-            recursiveFetch(value, obj_root, aggregation_source)
-        elif type(value) == list:
-            for element in value:
-                recursiveFetch(element, obj_root, aggregation_source)
-
+            if type(val) == list:
+                handleList(val)
+            if type(val) == dict:
+                logging.info(f"--- Inspecting key:{key} - val: {val}")
+                handleEntryIfNotVisited(val,visited,queue)
+            if key != '@odata.id':
+                continue
+            if val not in visited:
+                visited.append(val)
+                queue.append(val)
+    return visited
 
 class EventProcessor(Resource):
     def __init__(self):
         logging.info('Event Listener init called')
         self.root = constants.PATHS['Root']
-
-
-
-    def ManagerCreated(self, event):
-        logging.info("ManagerCreated method called")
-        host = event['MessageArgs'][0]
-        port = event['MessageArgs'][1]
-        response = requests.get(f"{host}:{port}/{event['OriginOfCondition']['@odata.id']}")
-        if response.status_code == 200:
-            redfish_obj = response.json()
-
-            request.data = json.dumps(redfish_obj, indent=2).encode('utf-8')
-            # Update ManagerCollection before fetching the resource subtree
-            ManagerCollectionAPI.post(self)
-            recursiveFetch(redfish_obj, redfish_obj['@odata.id'], host, port)
-
 
 
     def ResourceCreated(self, event):
@@ -118,8 +149,6 @@ class EventProcessor(Resource):
         #TODO don't assume there is only one AggregationSource
 
         aggregation_source = getAggregationSource()
-        #if aggregation_source is None:
-        #  return error
 
         hostname=aggregation_source["HostName"]
 
@@ -130,7 +159,7 @@ class EventProcessor(Resource):
             request.data = json.dumps(redfish_obj, indent=2).encode('utf-8')
             # Update ManagerCollection before fetching the resource subtree
             createResource(redfish_obj)
-            recursiveFetch(redfish_obj, redfish_obj['@odata.id'], aggregation_source)
+            bfsInspection(redfish_obj,aggregation_source)
 
         request.data = json.dumps(aggregation_source)
         patchResource(constants.PATHS['Root'],aggregation_source)
