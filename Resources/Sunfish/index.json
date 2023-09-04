@@ -25,6 +25,9 @@
     "Storage": {
         "@odata.id": "/redfish/v1/Storage"
     },
+    "Systems": {
+        "@odata.id": "/redfish/v1/Systems"
+    },
     "AccountService": {
         "@odata.id": "/redfish/v1/AccountService"
     },
