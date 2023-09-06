@@ -65,9 +65,9 @@ def fetchResource(obj_id, aggregation_source):
         return redfish_obj
 
 def handleEntryIfNotVisited(entry,visited,queue):
-    if '@odata.id' in entry and entry['@odata.id'] not in visited:
-        visited.append(entry['@odata.id'])
-        queue.append(entry['@odata.id'])
+    if entry not in visited:
+        visited.append(entry)
+        queue.append(entry)
 
 def fetchResourceAndTree(id,aggregation_source,visited,queue,fetched):
     path_nodes = id.split("/")
@@ -97,12 +97,20 @@ def bfsInspection(node,aggregation_source):
     visited.append(node['@odata.id'])
     queue.append(node['@odata.id'])
 
-    def handleList(_list):
-        for entry in _list:
-            if type(entry) == list:
-                handleList(entry)
-            else:
-                handleEntryIfNotVisited(entry,visited,queue)
+
+    def handleNestedObject(obj):
+        if type(obj) == list:
+            for entry in obj:
+                if type(entry) == list or type(entry) == dict:
+                    handleNestedObject(entry)
+        if type(obj) == dict:
+            for key,value in obj.items():
+                if key == '@odata.id':
+                    handleEntryIfNotVisited(value, visited,queue)
+                elif type(value) == list or type(value) == dict:
+                    handleNestedObject(value)
+
+
 
 
 
@@ -111,30 +119,22 @@ def bfsInspection(node,aggregation_source):
         print(queue)
         id = queue.pop(0)
         redfish_obj = fetchResourceAndTree(id, aggregation_source,visited,queue,fetched)
+
         if redfish_obj is None or type(redfish_obj)!= dict:
             logging.info(f"Resource - {id} - not available")
             continue
+
         for key,val in redfish_obj.items():
 
             if key == 'Links':
                 logging.info(f"!!!! Link... key: {key}, val: {val} ")
-                if type(val)==dict:
-                    for link,link_value in val.items():
-                        if type(link_value) == list:
-                            handleList(link_value)
-                        else:
-                            handleEntryIfNotVisited(link_value,visited,queue)
+                if type(val)==dict or type(val)==list:
+                    handleNestedObject(val)
 
-            if type(val) == list:
-                handleList(val)
-            if type(val) == dict:
-                logging.info(f"--- Inspecting key:{key} - val: {val}")
-                handleEntryIfNotVisited(val,visited,queue)
-            if key != '@odata.id':
-                continue
-            if val not in visited:
-                visited.append(val)
-                queue.append(val)
+            if key == '@odata.id':
+                handleEntryIfNotVisited(val, visited, queue)
+            if type(val) == list or type(val) == dict:
+                handleNestedObject(val)
     return visited
 
 class EventProcessor(Resource):
