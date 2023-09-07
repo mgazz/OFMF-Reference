@@ -109,7 +109,9 @@ class EventProcessor(Resource):
         create_object(redfish_obj, [], [], file_path)
 
         if ("Fabric" in redfish_obj['@odata.type']
-                or "System" in redfish_obj['@odata.type']) \
+                or "System" in redfish_obj['@odata.type']
+                or "Chassis" in redfish_obj['@odata.type']
+                or "Storage" in redfish_obj['@odata.type']) \
                 and "Collection" not in redfish_obj['@odata.type']:
             #import pdb;pdb.set_trace()
             logging.info(f"updating collection with {redfish_obj['@odata.id']}")
@@ -129,7 +131,8 @@ class EventProcessor(Resource):
             redfish_obj = response.json()
 
             EventProcessor.createInspectedObject(self,redfish_obj)
-            aggregation_source["Links"]["ResourcesAccessed"].append(redfish_obj['@odata.id'])
+            if redfish_obj['@odata.id'] not in aggregation_source["Links"]["ResourcesAccessed"]:
+                aggregation_source["Links"]["ResourcesAccessed"].append(redfish_obj['@odata.id'])
             return redfish_obj
 
     def handleEntryIfNotVisited(self,entry, visited, queue):
