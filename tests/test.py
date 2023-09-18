@@ -28,6 +28,25 @@ class TestOFMF(unittest.TestCase):
         response = self.client.post(chassis_url, json=test_templates.test_chassis)
         status_code = response.status_code
         self.assertEqual(status_code, 200)
+    
+    def test_aggregation_source_creation (self):
+        events_url = f"/EventListener"
+        response = self.client.post(events_url, json=test_templates.test_aggregation_source_event)
+        status_code = response.status_code
+        self.assertEqual(status_code, 200)
+        
+        manager_name = test_templates.test_aggregation_source_event["Events"][0]["OriginOfCondition"]["@odata.id"].split('/')[-1]
+        aggr_source_url = f"{REST_BASE}/AggregationService/AggregationSources/{manager_name}"
+        response = self.client.get(aggr_source_url)
+        status_code = response.status_code
+        self.assertEqual(status_code, 200)
+        response_payload = response.get_json()
+
+        #Check Aggregtion SOurce got created with proper Id
+        self.assertEqual(response_payload["Id"], manager_name)
+        #Check the Hostoname:port was properly parsed
+        hostname = f"{test_templates.test_aggregation_source_event['Events'][0]['MessageArgs'][0]}:{test_templates.test_aggregation_source_event['Events'][0]['MessageArgs'][1]}"
+        self.assertEqual(response_payload["HostName"], hostname)
 
 if __name__ == '__main__':
     unittest.main()
