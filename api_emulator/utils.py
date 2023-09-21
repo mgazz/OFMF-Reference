@@ -163,8 +163,8 @@ def create_path(*args):
     # HTTP GET
 def get_json_data(path):
     try:
-        json_data = open(path)
-        data = json.load(json_data)
+        with open(path) as json_data:
+            data = json.load(json_data)
         data = remove_json_object(data, "@Redfish.Copyright")
         if 'Password' in data:
             remove_json_object(data, 'Password')
