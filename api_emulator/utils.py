@@ -129,8 +129,9 @@ def update_collections_json(path, link):
         data = json.load(file_json)
 
     # Update the keys of payload in json file.
-    data['Members@odata.count'] = int(data['Members@odata.count']) + 1
-    data['Members'].append({"@odata.id": link})
+    if {"@odata.id": link} not in data['Members']:
+        data['Members@odata.count'] = int(data['Members@odata.count']) + 1
+        data['Members'].append({"@odata.id": link})
 
     # Write the updated json to file.
     with open(path, 'w') as file_json:
