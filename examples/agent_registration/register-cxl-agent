@@ -1,0 +1,17 @@
+#!/bin/bash
+
+
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+
+printf "${GREEN}Registering CXL Agent...${NC}\n"
+curl -X POST -H "Content-Type: application/json" \
+	-d @./cxl-newaggrsource.json \
+	http://127.0.0.1:5000/EventListener > /dev/null 2>&1
+
+curl -X POST -H "Content-Type: application/json" \
+	-d @./cxl-fabric.json \
+	http://127.0.0.1:5000/EventListener > /dev/null 2>&1
+
+
