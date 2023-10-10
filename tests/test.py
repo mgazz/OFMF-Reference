@@ -45,7 +45,7 @@ class TestOFMF(unittest.TestCase):
         #Check Aggregtion SOurce got created with proper Id
         self.assertEqual(response_payload["Id"], manager_name)
         #Check the Hostoname:port was properly parsed
-        hostname = f"{test_templates.test_aggregation_source_event['Events'][0]['MessageArgs'][0]}:{test_templates.test_aggregation_source_event['Events'][0]['MessageArgs'][1]}"
+        hostname = test_templates.test_aggregation_source_event['Events'][0]['MessageArgs'][1]
         self.assertEqual(response_payload["HostName"], hostname)
 
 if __name__ == '__main__':
