@@ -101,7 +101,7 @@ test_aggregation_source_event = {
             "Severity": "Ok",
             "Message": "New Manager Available at FQDN http://foo.bar.org and Port 1234 ",
             "MessageId": "Manager.1.0.AggregationSourceDiscovered",
-            "MessageArgs": [ "http://foo.bar.org", "1234" ],
+            "MessageArgs": [ "Redfish", "http://foo.bar.org:1234" ],
             "OriginOfCondition": {
                 "@odata.id": "/redfish/v1/Managers/Manager1"
             }
