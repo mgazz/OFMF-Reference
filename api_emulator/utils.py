@@ -52,6 +52,8 @@ import g
 from flask import jsonify, make_response, request, session
 from functools import wraps
 from api_emulator.redfish.templates.collection import get_Collection_instance
+from api_emulator.redfish.constants import PATHS
+
 
 def timestamp():
     """
@@ -211,7 +213,7 @@ def create_and_patch_object (config, members, member_ids, path, collection_path)
 
 def delete_object (path, base_path):
 
-    delPath = path.replace('Resources','/redfish/v1').replace("\\","/")
+    delPath = path.replace(PATHS['Root'],'/redfish/v1').replace("\\","/")
     path2 = create_path(base_path, 'index.json').replace("\\","/")
     try:
         with open(path2,"r") as pdata:
@@ -238,7 +240,7 @@ def delete_object (path, base_path):
 
 def delete_collection (path, base_path):
 
-    delPath = path.replace('Resources','/redfish/v1').replace("\\","/")
+    delPath = path.replace(PATHS['Root'],'/redfish/v1').replace("\\","/")
     path2 = create_path(base_path, 'index.json').replace("\\","/")
     try:
         with open(path2,"r") as pdata:
@@ -327,7 +329,7 @@ def create_collection (collection_path, collection_type, parent_path):
 
         global config
 
-        path = collection_path.replace('Resources','/redfish/v1').replace("\\","/")
+        path = collection_path.replace(PATHS['Root'],'/redfish/v1').replace("\\","/")
         wildcards = {'path': path, 'cType': collection_type}
         config=get_Collection_instance(wildcards)
         collection_type = collection_type
