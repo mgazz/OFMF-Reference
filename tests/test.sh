@@ -9,7 +9,7 @@ cd ${SCRIPT_DIR}/..
 
 #source ./venv/bin/activate
 
-python emulator.py -p 80 -redfish-path ./Resources/CXLAgent/ &
+python emulator.py -p 5002 -redfish-path ./Resources/CXLAgent/ &
 
 sleep 10
 
