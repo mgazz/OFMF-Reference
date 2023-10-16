@@ -9,4 +9,6 @@ cd ${SCRIPT_DIR}/..
 
 source ./venv/bin/activate
 
+python emulator.py -p 5002 -redfish-path ./Resources/CXLAgent/ &
+
 python -m unittest discover -s tests
