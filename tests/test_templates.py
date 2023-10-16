@@ -90,21 +90,19 @@ test_system = {
 }
 
 test_aggregation_source_event = {
-    "@odata.type": "#Event.v1_7_0.Event",
-    "Id": "1",
-    "Name": "Manager Created",
-    "Context": "",
-    "Events": [
-        {
-            "EventType": "Other",
-            "EventId": "4594",
-            "Severity": "Ok",
-            "Message": "New Manager Available at FQDN http://foo.bar.org and Port 1234 ",
-            "MessageId": "Manager.1.0.AggregationSourceDiscovered",
-            "MessageArgs": [ "Redfish", "http://foo.bar.org:1234" ],
-            "OriginOfCondition": {
-                "@odata.id": "/redfish/v1/Managers/Manager1"
-            }
-        }
-    ]
+"@odata.type": "#Event.v1_7_0.Event",
+"Id": "1",
+"Name": "AggregationSourceDiscovered",
+"Context": "",
+"Events": [ {
+  "EventType": "Other",
+  "EventId": "4594",
+  "Severity": "Ok",
+  "Message": "A aggregation source of connection method Redfish located at http://cxl01.ofa.org:5002 has been discovered.",
+  "MessageId": "Foo.1.0.AggregationSourceDiscovered",
+  "MessageArgs": [ "Redfish", "http://127.0.0.1:5002" ],
+  "OriginOfCondition": {
+   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/CXL"
+  }
 }
+]}
