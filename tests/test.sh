@@ -7,8 +7,10 @@ echo "Script dir: $SCRIPT_DIR"
 
 cd ${SCRIPT_DIR}/..
 
-source ./venv/bin/activate
+#source ./venv/bin/activate
 
 python emulator.py -p 80 -redfish-path ./Resources/CXLAgent/ &
+
+sleep 10
 
 python -m unittest discover -s tests
