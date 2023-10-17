@@ -80,6 +80,8 @@ from api_emulator.utils import *
 #           loaded into the emulator.
 #
 
+# Path to local redfish tree
+SUNFISH_TREE_PATH='./Resources/Sunfish'
 
 # Trays to load into the resource manager
 TRAYS = None
@@ -134,9 +136,9 @@ def get_metadata():
 
         md_xml = ""
 
-        if os.path.exists('Resources/$metadata/index.xml'):
+        if os.path.exists(f'{SUNFISH_TREE_PATH}/$metadata/index.xml'):
             # Use dynamic data source
-            filename = 'Resources/$metadata/index.xml'
+            filename = f'{SUNFISH_TREE_PATH}/$metadata/index.xml'
         else:
             # Use static mockup
             mockup_path = MOCKUPFOLDERS[0]
@@ -199,8 +201,8 @@ def before_request():
     print(location)
     if 'UserName' not in session and location != None:
         split_path = os.path.split(location)
-        path = location.replace('/redfish/v1', 'Resources')
-        delete_object(path, split_path[0].replace('/redfish/v1', 'Resources'))
+        path = location.replace('/redfish/v1', f'{SUNFISH_TREE_PATH}')
+        delete_object(path, split_path[0].replace('/redfish/v1', f'{SUNFISH_TREE_PATH}'))
         print("location deleted : "+location)
 
 ################### End of before request definition ###############
@@ -257,10 +259,10 @@ def get_odata():
 
         odata_json = ""
 
-        if os.path.exists('Resources//odata//index.json'):
+        if os.path.exists(f'{SUNFISH_TREE_PATH}//odata//index.json'):
             # Use dynamic data source
-            filename = 'Resources/odata/index.json'
-            logging.info ('Resources path exists:', filename)
+            filename = f'{SUNFISH_TREE_PATH}/odata/index.json'
+            logging.info (f'{SUNFISH_TREE_PATH} path exists:', filename)
         else:
             # Use static mockup
             mockup_path = MOCKUPFOLDERS[0]
@@ -694,7 +696,13 @@ def main():
                            help='Run the emulator in debug mode. Note that if you'
                                 ' run in debug mode, then the emulator will only'
                                 'be ran locally.')
+
+    argparser.add_argument('-redfish-path', type=str, default=SUNFISH_TREE_PATH,
+                           help='path to the local redfish tree directory')
+
     args = argparser.parse_args()
+
+    PATHS['Root'] = args.redfish_path
 
     try:
         startup()

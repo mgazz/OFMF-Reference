@@ -5,19 +5,19 @@ This document provides an example showcasing the registration of two Agents in S
 We can first start an Agent exposing a mocked CXL fabric.
 
 ```commandline
-python emulator.py -p 5002 -redfish-path ./Resources/CXLAgent/
+python ofmf-main.py -p 5002 -redfish-path ./Resources/CXLAgent/
 
 ```
 
 And one for a mocked NVMe-oF fabric.
 
 ```commandline
-python emulator.py -p 5001 -redfish-path ./Resources/NVMeoFAgent/
+python ofmf-main.py -p 5001 -redfish-path ./Resources/NVMeoFAgent/
 ```
 
 In a similar fashion we start the Sunfish server. 
 ```commandline
-python emulator.py -redfish-path ./Resources/Sunfish/
+python ofmf-main.py -redfish-path ./Resources/Sunfish/
 ```
 
 At this stage, Agents and Sunfish are running with a different states, represented by different Redfish resource trees.
